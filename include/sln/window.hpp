@@ -11,7 +11,10 @@ class Window {
 public:
         Window(std::string title, uint32_t width, uint32_t height);
 
-        GLFWwindow* window();
+        bool should_close();
+        void poll_events();
+
+        GLFWwindow* get();
         uint32_t width();
         uint32_t height();
         std::string title();

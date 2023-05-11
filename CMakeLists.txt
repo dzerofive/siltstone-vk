@@ -9,8 +9,10 @@ add_executable(vk6
         src/windowing_instance.cpp
 	src/vkw/instance.cpp
         src/window.cpp
+        src/surface.cpp
 	src/vkw/physical_device.cpp
         src/vkw/device.cpp
+        src/vkw/swapchain.cpp
 
         src/vkw/print_info.cpp
         src/print_info.cpp)

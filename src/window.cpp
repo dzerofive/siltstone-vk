@@ -6,7 +6,14 @@ sln::Window::Window(std::string title, uint32_t width, uint32_t height)
         m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 }
 
-GLFWwindow* sln::Window::window() { return m_window; }
+bool sln::Window::should_close() {
+        return glfwWindowShouldClose(m_window);
+}
+void sln::Window::poll_events() {
+        glfwPollEvents();
+}
+
+GLFWwindow* sln::Window::get() { return m_window; }
 std::string sln::Window::title() { return m_title; }
 uint32_t sln::Window::height() { return m_height; }
 uint32_t sln::Window::width() { return m_width; }
