@@ -1,7 +1,7 @@
 #include <sln/vkw/swapchain.hpp>
 #include <algorithm>
 
-vk::Extent2D get_glfw_extent(GLFWwindow* window) {
+inline vk::Extent2D get_glfw_extent(GLFWwindow* window) {
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
         return vk::Extent2D{static_cast<uint32_t>(w), static_cast<uint32_t>(h)};
@@ -15,6 +15,7 @@ sln::vkw::Swapchain::Swapchain(sln::vkw::Device         device,
         m_surface_capabilities = p_device.get().getSurfaceCapabilitiesKHR(surface.get());
         m_surface_formats = p_device.get().getSurfaceFormatsKHR(surface.get());
         m_surface_format = m_surface_formats[0];
+        m_framebuffer_extent = window.framebuffer_extent();
 
         uint32_t q = 0;
         vk::SwapchainCreateInfoKHR swap_info{};
@@ -23,7 +24,7 @@ sln::vkw::Swapchain::Swapchain(sln::vkw::Device         device,
 
         swap_info.imageFormat = m_surface_format.format;
         swap_info.imageColorSpace = m_surface_format.colorSpace;
-        swap_info.imageExtent = get_glfw_extent(window.get());
+        swap_info.imageExtent = m_framebuffer_extent;
         swap_info.imageArrayLayers = 1;
         swap_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
         swap_info.imageSharingMode = vk::SharingMode::eExclusive;
@@ -36,5 +37,28 @@ sln::vkw::Swapchain::Swapchain(sln::vkw::Device         device,
         swap_info.clipped = true;
         swap_info.oldSwapchain = VK_NULL_HANDLE;
 
-        m_swapchain = device.get().createSwapchainKHR(swap_info);
+        m_swapchain = device->createSwapchainKHR(swap_info);
+
+        auto images = device->getSwapchainImagesKHR(m_swapchain);
+        vk::ImageViewCreateInfo image_view_info{};
+        image_view_info.format = vk::Format::eB8G8R8A8Unorm;
+        image_view_info.viewType = vk::ImageViewType::e2D;
+        image_view_info.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+        for(const auto& i : images) {
+                image_view_info.image = i;
+                m_image_views.push_back(device->createImageViewUnique(image_view_info));
+        }
+}
+
+const vk::SwapchainKHR& sln::vkw::Swapchain::get() const noexcept {
+        return m_swapchain;
+}
+const vk::SwapchainKHR* sln::vkw::Swapchain::operator->() const noexcept {
+        return &m_swapchain;
+}
+const vk::SurfaceFormatKHR& sln::vkw::Swapchain::format() const noexcept {
+        return m_surface_format;
+}
+const vk::Extent2D& sln::vkw::Swapchain::extent() const noexcept {
+        return m_framebuffer_extent; 
 }

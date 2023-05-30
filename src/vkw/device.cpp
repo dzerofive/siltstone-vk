@@ -23,3 +23,7 @@ sln::vkw::Device::Device(const sln::vkw::PhysicalDevice pdevice, std::vector<con
 const vk::Device& sln::vkw::Device::get() const noexcept {
         return m_device;
 }
+
+const vk::Device* sln::vkw::Device::operator->() const noexcept {
+        return &m_device;
+}

@@ -15,13 +15,20 @@ public:
                   sln::Window window, 
                   sln::Surface surface, 
                   vk::PresentModeKHR present_mode);
-        void get();
+        
+        const vk::SwapchainKHR& get() const noexcept;
+        const vk::SwapchainKHR* operator->() const noexcept;
+        
+        const vk::SurfaceFormatKHR& format() const noexcept;
+        const vk::Extent2D& extent() const noexcept;
 
 private:
         vk::SurfaceCapabilitiesKHR m_surface_capabilities; 
         vk::SwapchainKHR m_swapchain;
 
         std::vector<vk::SurfaceFormatKHR> m_surface_formats;
+        std::vector<vk::UniqueImageView> m_image_views;
+        vk::Extent2D m_framebuffer_extent;
         vk::SurfaceFormatKHR m_surface_format;
 };
 } // namespace sln::vkw

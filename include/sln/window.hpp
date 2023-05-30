@@ -2,6 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan.hpp>
 
 #include <string>
 
@@ -18,6 +19,7 @@ public:
         uint32_t width();
         uint32_t height();
         std::string title();
+        vk::Extent2D framebuffer_extent();
 
 private:
         GLFWwindow* m_window;

@@ -12,6 +12,11 @@ bool sln::Window::should_close() {
 void sln::Window::poll_events() {
         glfwPollEvents();
 }
+vk::Extent2D sln::Window::framebuffer_extent() {
+        int x, y;
+        glfwGetFramebufferSize(m_window, &x, &y);
+        return vk::Extent2D{static_cast<uint32_t>(x), static_cast<uint32_t>(y)};
+}
 
 GLFWwindow* sln::Window::get() { return m_window; }
 std::string sln::Window::title() { return m_title; }

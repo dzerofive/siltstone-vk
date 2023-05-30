@@ -12,6 +12,7 @@
 #include <sln/vkw/physical_device.hpp>
 #include <sln/vkw/device.hpp>
 #include <sln/vkw/swapchain.hpp>
+#include <sln/vkw/pipeline.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -63,5 +64,6 @@ namespace sln {
                                       window, 
                                       surface, 
                                       vk::PresentModeKHR::eMailbox};
+        sln::vkw::Pipeline pipeline{device, swapchain};
     };
 }

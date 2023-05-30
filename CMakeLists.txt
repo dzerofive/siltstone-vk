@@ -13,6 +13,8 @@ add_executable(vk6
 	src/vkw/physical_device.cpp
         src/vkw/device.cpp
         src/vkw/swapchain.cpp
+        src/vkw/pipeline.cpp
+        src/vkw/spv_shader.cpp
 
         src/vkw/print_info.cpp
         src/print_info.cpp)
