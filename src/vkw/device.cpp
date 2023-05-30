@@ -18,12 +18,16 @@ sln::vkw::Device::Device(const sln::vkw::PhysicalDevice pdevice, std::vector<con
 	device_info.ppEnabledExtensionNames = extensions.data();
 	
         m_device = pdevice.get().createDevice(device_info);
+
+        m_graphic_queue = m_device.getQueue(0, 0);
 }
 
 const vk::Device& sln::vkw::Device::get() const noexcept {
         return m_device;
 }
-
 const vk::Device* sln::vkw::Device::operator->() const noexcept {
         return &m_device;
+}
+const vk::Queue& sln::vkw::Device::graphic_queue() const noexcept {
+        return m_graphic_queue;
 }

@@ -12,7 +12,9 @@ public:
         const vk::Device& get() const noexcept;
         const vk::Device* operator->() const noexcept;
 
+        const vk::Queue& graphic_queue() const noexcept;
 private:	
+        vk::Queue m_graphic_queue;
         vk::Device m_device;
 
 };

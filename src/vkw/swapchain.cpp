@@ -46,7 +46,7 @@ sln::vkw::Swapchain::Swapchain(sln::vkw::Device         device,
         image_view_info.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
         for(const auto& i : images) {
                 image_view_info.image = i;
-                m_image_views.push_back(device->createImageViewUnique(image_view_info));
+                m_image_views.push_back(device->createImageView(image_view_info));
         }
 }
 
@@ -61,4 +61,10 @@ const vk::SurfaceFormatKHR& sln::vkw::Swapchain::format() const noexcept {
 }
 const vk::Extent2D& sln::vkw::Swapchain::extent() const noexcept {
         return m_framebuffer_extent; 
+}
+const std::vector<vk::ImageView> sln::vkw::Swapchain::image_views() const noexcept {
+        return m_image_views;
+}
+const vk::ImageView sln::vkw::Swapchain::image_view(size_t index) const noexcept {
+        return m_image_views[index];
 }

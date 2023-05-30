@@ -6,6 +6,7 @@
 // - fixed stage functions     //
 // - programmable (shaders)    //
 // - getters                   //
+// - framebuffers              //
 
 inline void sln::vkw::Pipeline::create_render_pass(const sln::vkw::Device& device, const sln::vkw::Swapchain& swapchain) {
         vk::AttachmentDescription color_attachment{};
@@ -30,14 +31,14 @@ inline void sln::vkw::Pipeline::create_render_pass(const sln::vkw::Device& devic
         renderpass_info.pAttachments = &color_attachment;
         renderpass_info.subpassCount = 1;
         renderpass_info.pSubpasses = &subpass_desc;
-        m_renderpass = device->createRenderPass(renderpass_info); 
+        m_render_pass = device->createRenderPass(renderpass_info); 
 }
 
 // Constructor
 sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swapchain& swapchain) {
         create_render_pass(device, swapchain);
 
-
+        // Fixed stages
         std::vector<vk::DynamicState> dynamic_states {
                 vk::DynamicState::eViewport, 
                 vk::DynamicState::eScissor
@@ -127,6 +128,7 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
         vk::PipelineLayout pipeline_layout = device->createPipelineLayout(pipeline_layout_info);
 
 
+        // Shader stages
         sln::vkw::Shader vertex_shader(device, "shaders/vert.spv");
         vk::PipelineShaderStageCreateInfo vertex_shader_stage{};
         vertex_shader_stage.stage = vk::ShaderStageFlagBits::eVertex;
@@ -144,6 +146,8 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
                 fragment_shader_stage
         };
 
+
+        // Crate pipeline
         vk::GraphicsPipelineCreateInfo pipeline_info{};
         pipeline_info.stageCount = shader_stages.size();
         pipeline_info.pStages = shader_stages.data();
@@ -157,11 +161,24 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
         pipeline_info.pColorBlendState = &color_blend_info;
         pipeline_info.pDynamicState = &dynamic_state_info;
         pipeline_info.layout = pipeline_layout;
-        pipeline_info.renderPass = m_renderpass;
+        pipeline_info.renderPass = m_render_pass;
         pipeline_info.subpass = 0;
         
-        
         m_pipeline = device->createGraphicsPipeline(nullptr, pipeline_info).value;
+
+
+        // Create framebuffers
+        for(auto i : swapchain.image_views()) {
+                vk::FramebufferCreateInfo framebuffer_info{};
+                framebuffer_info.renderPass = m_render_pass;
+                framebuffer_info.attachmentCount = 1;
+                framebuffer_info.pAttachments = &i;
+                framebuffer_info.width = swapchain.extent().width;
+                framebuffer_info.height = swapchain.extent().height;
+                framebuffer_info.layers = 1;
+
+                m_framebuffers.push_back(device->createFramebuffer(framebuffer_info, nullptr));
+        }
 }
 
 // Getters
@@ -170,4 +187,10 @@ const vk::Pipeline* sln::vkw::Pipeline::operator->() const noexcept {
 }
 const vk::Pipeline& sln::vkw::Pipeline::get() const noexcept {
         return m_pipeline;
+}
+const vk::RenderPass sln::vkw::Pipeline::render_pass() const noexcept {
+        return m_render_pass;
+}
+const vk::Framebuffer sln::vkw::Pipeline::framebuffer(size_t index) const noexcept {
+        return m_framebuffers[index];
 }

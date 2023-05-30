@@ -31,19 +31,91 @@ namespace sln {
                 print_info(pdevice);
                 print_info(window);
 
-                uint32_t q_index{1};
-                vk::BufferCreateInfo buff_info{};
-                buff_info.size = 3*1024*1024;
-                buff_info.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-                buff_info.sharingMode = vk::SharingMode::eExclusive;
-                buff_info.queueFamilyIndexCount = 1;
-                buff_info.pQueueFamilyIndices = &q_index;
-                auto buffer = device.get().createBuffer(buff_info);
-                std::cout << sln::prefix::INFO << "Test buffer object type - " << vk::to_string(buffer.debugReportObjectType) << '\n';
+
+                vk::CommandPoolCreateInfo pool_info{};
+                pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+                pool_info.queueFamilyIndex = 0;
+                vk::CommandPool command_pool = device->createCommandPool(pool_info);
+
+                vk::CommandBufferAllocateInfo allocate_info{};
+                allocate_info.commandPool = command_pool;
+                allocate_info.level = vk::CommandBufferLevel::ePrimary;
+                allocate_info.commandBufferCount = 1;
+                vk::CommandBuffer command_buffer;
+                auto res = device->allocateCommandBuffers(&allocate_info, &command_buffer);
+                if(res != vk::Result::eSuccess) throw std::runtime_error("Failed to allocate command buffers");
+
+                vk::Semaphore semaphore_image_available = device->createSemaphore({});
+                vk::Semaphore semaphore_render_finished = device->createSemaphore({});
+                vk::Fence in_flight = device->createFence({vk::FenceCreateFlagBits::eSignaled});
 
                 while(!window.should_close()) {
                         window.poll_events();
+                        
+
+                        auto res = device->waitForFences(1, &in_flight, true, 100000000);
+                        vk::resultCheck(res, "Fence");
+                        res = device->resetFences(1, &in_flight);
+                        vk::resultCheck(res, "Reset fence");
+                        
+                        uint32_t image_index = 0;
+                        res = device->acquireNextImageKHR(swapchain.get(), 100000000, semaphore_image_available, VK_NULL_HANDLE, &image_index);
+                        vk::resultCheck(res, "Acquire next image");
+
+                        command_buffer.reset();
+                        vk::CommandBufferBeginInfo buffer_begin_info{};
+                        command_buffer.begin(buffer_begin_info);
+
+                        vk::RenderPassBeginInfo render_pass_begin_info{};
+                        render_pass_begin_info.framebuffer = pipeline.framebuffer(image_index); 
+                        render_pass_begin_info.renderPass = pipeline.render_pass();
+                        render_pass_begin_info.renderArea.offset = vk::Offset2D{0, 0};
+                        render_pass_begin_info.renderArea.extent = swapchain.extent();
+                        vk::ClearValue clear_color = vk::ClearValue(vk::ClearColorValue{std::array<float, 4>{0.1f, 0.1f, 0.14f, 1.f}});
+                        render_pass_begin_info.clearValueCount = 1;
+                        render_pass_begin_info.pClearValues = &clear_color;
+                        command_buffer.beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
+                        command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
+
+                        vk::Rect2D scissor{};
+                        scissor.offset = vk::Offset2D{0, 0};
+                        scissor.extent = swapchain.extent();
+                        command_buffer.setScissor(0, 1, &scissor);
+
+                        vk::Viewport viewport{};
+                        viewport.x = 0.f;
+                        viewport.y = 0.f;
+                        viewport.width = swapchain.extent().width;
+                        viewport.height = swapchain.extent().height;
+                        viewport.minDepth = 0.f;
+                        viewport.maxDepth = 1.f;
+                        command_buffer.setViewport(0, 1, &viewport);
+
+                        command_buffer.draw(4, 1, 0, 0);
+                        command_buffer.endRenderPass();
+                        command_buffer.end();
+
+                        vk::SubmitInfo submit_info{};
+                        submit_info.waitSemaphoreCount = 1;
+                        submit_info.pWaitSemaphores = &semaphore_image_available;
+                        vk::PipelineStageFlags wait_stages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
+                        submit_info.pWaitDstStageMask = wait_stages;
+                        submit_info.commandBufferCount = 1;
+                        submit_info.pCommandBuffers = &command_buffer;
+                        submit_info.signalSemaphoreCount = 1;
+                        submit_info.pSignalSemaphores = &semaphore_render_finished;
+                        device.graphic_queue().submit(submit_info, in_flight); 
+
+                        vk::PresentInfoKHR present_info{};
+                        present_info.waitSemaphoreCount = 1;
+                        present_info.pWaitSemaphores = &semaphore_render_finished;
+                        present_info.swapchainCount = 1;
+                        present_info.pSwapchains = &swapchain.get();
+                        present_info.pImageIndices = &image_index;
+                        res = device.graphic_queue().presentKHR(present_info);
+                        vk::resultCheck(res, "Present");
                 };
+                device->waitIdle();
         };
 
 
