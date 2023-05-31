@@ -4,6 +4,7 @@
 #include <sln/vkw/device.hpp>
 #include <sln/vkw/swapchain.hpp>
 #include <sln/vkw/spv_shader.hpp>
+#include <sln/type/vertex.hpp>
 
 namespace sln::vkw {
 class Pipeline {

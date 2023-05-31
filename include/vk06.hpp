@@ -14,12 +14,15 @@
 #include <sln/vkw/swapchain.hpp>
 #include <sln/vkw/pipeline.hpp>
 
+#include <sln/type/vertex.hpp>
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <string>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 
 namespace sln {
@@ -30,6 +33,31 @@ namespace sln {
         vk06() {
                 print_info(pdevice);
                 print_info(window);
+
+                std::vector<sln::Vertex> vertices = {
+                        {{0.f, -0.5f, 0.f}, {1.f, 0.f, 0.f}},
+                        {{0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}},
+                        {{-0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f}},
+                        {{0.f, 1.f, 0.f}, {1.f, 1.f, 1.f}},
+                        {{-0.5f, 1.f, 0.f}, {0.5f, 0.5f, 0.5f}}
+                };
+
+                vk::BufferCreateInfo vertex_buffer_info{};
+                vertex_buffer_info.size = sizeof(vertices[0])*vertices.size();
+                vertex_buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer;
+                vertex_buffer_info.sharingMode = vk::SharingMode::eExclusive;
+                m_vertex_buffer = device->createBuffer(vertex_buffer_info);
+                auto vertex_requirements = device->getBufferMemoryRequirements(m_vertex_buffer);
+
+                vk::MemoryAllocateInfo alloc_info{};
+                alloc_info.allocationSize = vertex_requirements.size;
+                alloc_info.memoryTypeIndex = 2; // FIXME: May break on other GPUs?
+                auto m_vertex_memory = device->allocateMemory(alloc_info);
+                device->bindBufferMemory(m_vertex_buffer, m_vertex_memory, 0);
+                sln::Vertex* data = static_cast<sln::Vertex*>(device->mapMemory(m_vertex_memory, 0, vertex_buffer_info.size));
+                std::copy_n(vertices.begin(), vertices.size(), data);
+                device->unmapMemory(m_vertex_memory);
+
 
 
                 vk::CommandPoolCreateInfo pool_info{};
@@ -77,6 +105,10 @@ namespace sln {
                         command_buffer.beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
                         command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
 
+                        vk::Buffer vertex_buffers[] = {m_vertex_buffer};
+                        vk::DeviceSize offsets[] = {0};
+                        command_buffer.bindVertexBuffers(0, 1, vertex_buffers, offsets);
+
                         vk::Rect2D scissor{};
                         scissor.offset = vk::Offset2D{0, 0};
                         scissor.extent = swapchain.extent();
@@ -91,7 +123,7 @@ namespace sln {
                         viewport.maxDepth = 1.f;
                         command_buffer.setViewport(0, 1, &viewport);
 
-                        command_buffer.draw(4, 1, 0, 0);
+                        command_buffer.draw(vertices.size(), 1, 0, 0);
                         command_buffer.endRenderPass();
                         command_buffer.end();
 
@@ -137,5 +169,9 @@ namespace sln {
                                       surface, 
                                       vk::PresentModeKHR::eMailbox};
         sln::vkw::Pipeline pipeline{device, swapchain};
+
+
+        vk::Buffer m_vertex_buffer;
+        vk::DeviceMemory m_vertex_memory;
     };
 }

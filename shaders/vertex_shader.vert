@@ -1,16 +1,10 @@
 #version 450
 
-
+layout(location = 0) in vec3 in_position;
+layout(location = 1) in vec3 color;
 layout(location = 0) out vec3 frag_color;
 
-vec2 positions[4] = vec2[](
-	vec2(0.0, -0.6),
-	vec2(0.5, 0.5),
-	vec2(-0.5, 0.5),
-        vec2(0.0, 1.0)
-);
-
 void main() {
-	gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
-	frag_color = vec3(positions[gl_VertexIndex]/2+0.5, 0.0);
+	gl_Position = vec4(in_position, 1.0);
+	frag_color = color;
 }

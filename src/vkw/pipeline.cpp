@@ -48,11 +48,13 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
         dynamic_state_info.pDynamicStates = dynamic_states.data();
         
 
+        auto binding_description = sln::Vertex::binding_description();
+        auto attribute_descriptions = sln::Vertex::attribute_descriptions();
         vk::PipelineVertexInputStateCreateInfo vertex_input_info{};
-        vertex_input_info.vertexBindingDescriptionCount = 0;
-        vertex_input_info.pVertexBindingDescriptions = nullptr;
-        vertex_input_info.vertexAttributeDescriptionCount = 0;
-        vertex_input_info.pVertexAttributeDescriptions = nullptr;
+        vertex_input_info.vertexBindingDescriptionCount = 1;
+        vertex_input_info.pVertexBindingDescriptions = &binding_description;
+        vertex_input_info.vertexAttributeDescriptionCount = attribute_descriptions.size();
+        vertex_input_info.pVertexAttributeDescriptions = attribute_descriptions.data();
 
 
         vk::PipelineInputAssemblyStateCreateInfo input_assembly_info{};
