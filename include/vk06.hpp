@@ -15,6 +15,7 @@
 #include <sln/vkw/pipeline.hpp>
 
 #include <sln/type/vertex.hpp>
+#include <sln/type/model.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -41,6 +42,7 @@ namespace sln {
                         {{0.f, 1.f, 0.f}, {1.f, 1.f, 1.f}},
                         {{-0.5f, 1.f, 0.f}, {0.5f, 0.5f, 0.5f}}
                 };
+                Model test_model(device, vertices);
 
                 vk::BufferCreateInfo vertex_buffer_info{};
                 vertex_buffer_info.size = sizeof(vertices[0])*vertices.size();
@@ -105,10 +107,6 @@ namespace sln {
                         command_buffer.beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
                         command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
 
-                        vk::Buffer vertex_buffers[] = {m_vertex_buffer};
-                        vk::DeviceSize offsets[] = {0};
-                        command_buffer.bindVertexBuffers(0, 1, vertex_buffers, offsets);
-
                         vk::Rect2D scissor{};
                         scissor.offset = vk::Offset2D{0, 0};
                         scissor.extent = swapchain.extent();
@@ -123,7 +121,9 @@ namespace sln {
                         viewport.maxDepth = 1.f;
                         command_buffer.setViewport(0, 1, &viewport);
 
-                        command_buffer.draw(vertices.size(), 1, 0, 0);
+                        test_model.bind(command_buffer);
+                        test_model.draw(command_buffer);
+
                         command_buffer.endRenderPass();
                         command_buffer.end();
 
