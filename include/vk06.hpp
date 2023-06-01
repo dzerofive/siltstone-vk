@@ -36,6 +36,11 @@ namespace sln {
                 print_info(window);
 
                 std::vector<sln::Vertex> vertices = {
+                        {{-1.f, -1.f, 0.f}, {1.f, 1.f, 1.f}},
+                        {{-0.8f, -0.8f, 0.f}, {1.f, 0.f, 1.f}},
+                        {{-1.f, -0.6f, 0.f}, {0.f, 0.f, 0.f}}
+                };
+                std::vector<sln::Vertex> vertices2 = {
                         {{0.f, -0.5f, 0.f}, {1.f, 0.f, 0.f}},
                         {{0.5f, 0.5f, 0.f}, {0.f, 1.f, 0.f}},
                         {{-0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f}},
@@ -43,41 +48,51 @@ namespace sln {
                         {{-0.5f, 1.f, 0.f}, {0.5f, 0.5f, 0.5f}}
                 };
                 Model test_model(device, vertices);
+                Model test_model2(device, vertices2);
 
-                vk::BufferCreateInfo vertex_buffer_info{};
-                vertex_buffer_info.size = sizeof(vertices[0])*vertices.size();
-                vertex_buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer;
-                vertex_buffer_info.sharingMode = vk::SharingMode::eExclusive;
-                m_vertex_buffer = device->createBuffer(vertex_buffer_info);
-                auto vertex_requirements = device->getBufferMemoryRequirements(m_vertex_buffer);
-
-                vk::MemoryAllocateInfo alloc_info{};
-                alloc_info.allocationSize = vertex_requirements.size;
-                alloc_info.memoryTypeIndex = 2; // FIXME: May break on other GPUs?
-                auto m_vertex_memory = device->allocateMemory(alloc_info);
-                device->bindBufferMemory(m_vertex_buffer, m_vertex_memory, 0);
-                sln::Vertex* data = static_cast<sln::Vertex*>(device->mapMemory(m_vertex_memory, 0, vertex_buffer_info.size));
-                std::copy_n(vertices.begin(), vertices.size(), data);
-                device->unmapMemory(m_vertex_memory);
-
-
-
+                // Synchronization objects
+                vk::Semaphore semaphore_image_available = device->createSemaphore({});
+                vk::Semaphore semaphore_render_finished = device->createSemaphore({});
+                vk::Fence in_flight = device->createFence({vk::FenceCreateFlagBits::eSignaled});
+                // Command pool
                 vk::CommandPoolCreateInfo pool_info{};
                 pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
                 pool_info.queueFamilyIndex = 0;
                 vk::CommandPool command_pool = device->createCommandPool(pool_info);
 
+
+                // Draw Buffer
                 vk::CommandBufferAllocateInfo allocate_info{};
                 allocate_info.commandPool = command_pool;
                 allocate_info.level = vk::CommandBufferLevel::ePrimary;
                 allocate_info.commandBufferCount = 1;
+
                 vk::CommandBuffer command_buffer;
                 auto res = device->allocateCommandBuffers(&allocate_info, &command_buffer);
                 if(res != vk::Result::eSuccess) throw std::runtime_error("Failed to allocate command buffers");
 
-                vk::Semaphore semaphore_image_available = device->createSemaphore({});
-                vk::Semaphore semaphore_render_finished = device->createSemaphore({});
-                vk::Fence in_flight = device->createFence({vk::FenceCreateFlagBits::eSignaled});
+                
+                // Copy to device memory Buffer
+                vk::CommandBufferAllocateInfo copy_allocate_info{};
+                copy_allocate_info.commandPool = command_pool;
+                copy_allocate_info.level = vk::CommandBufferLevel::ePrimary;
+                copy_allocate_info.commandBufferCount = 1;
+                vk::CommandBuffer copy_command_buffer;
+                res = device->allocateCommandBuffers(&copy_allocate_info, &copy_command_buffer);
+
+                vk::CommandBufferBeginInfo copy_begin_info{};
+                copy_begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+                copy_command_buffer.begin(copy_begin_info);
+                test_model.copy_to_device(copy_command_buffer);
+                test_model2.copy_to_device(copy_command_buffer);
+                copy_command_buffer.end();
+                // Commence copying
+                vk::SubmitInfo copy_submit_info;
+                copy_submit_info.commandBufferCount = 1;
+                copy_submit_info.pCommandBuffers = &copy_command_buffer;
+                device.graphic_queue().submit(copy_submit_info, VK_NULL_HANDLE);        
+                device.graphic_queue().waitIdle();
+                device->freeCommandBuffers(command_pool, 1, &copy_command_buffer);
 
                 while(!window.should_close()) {
                         window.poll_events();
@@ -96,12 +111,13 @@ namespace sln {
                         vk::CommandBufferBeginInfo buffer_begin_info{};
                         command_buffer.begin(buffer_begin_info);
 
+                        // Blue-ish background
+                        vk::ClearValue clear_color = vk::ClearValue(vk::ClearColorValue{std::array<float, 4>{0.1f, 0.1f, 0.14f, 1.f}});
                         vk::RenderPassBeginInfo render_pass_begin_info{};
                         render_pass_begin_info.framebuffer = pipeline.framebuffer(image_index); 
                         render_pass_begin_info.renderPass = pipeline.render_pass();
                         render_pass_begin_info.renderArea.offset = vk::Offset2D{0, 0};
                         render_pass_begin_info.renderArea.extent = swapchain.extent();
-                        vk::ClearValue clear_color = vk::ClearValue(vk::ClearColorValue{std::array<float, 4>{0.1f, 0.1f, 0.14f, 1.f}});
                         render_pass_begin_info.clearValueCount = 1;
                         render_pass_begin_info.pClearValues = &clear_color;
                         command_buffer.beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
@@ -110,8 +126,6 @@ namespace sln {
                         vk::Rect2D scissor{};
                         scissor.offset = vk::Offset2D{0, 0};
                         scissor.extent = swapchain.extent();
-                        command_buffer.setScissor(0, 1, &scissor);
-
                         vk::Viewport viewport{};
                         viewport.x = 0.f;
                         viewport.y = 0.f;
@@ -119,10 +133,13 @@ namespace sln {
                         viewport.height = swapchain.extent().height;
                         viewport.minDepth = 0.f;
                         viewport.maxDepth = 1.f;
+                        command_buffer.setScissor(0, 1, &scissor);
                         command_buffer.setViewport(0, 1, &viewport);
 
                         test_model.bind(command_buffer);
                         test_model.draw(command_buffer);
+                        test_model2.bind(command_buffer);
+                        test_model2.draw(command_buffer);
 
                         command_buffer.endRenderPass();
                         command_buffer.end();
