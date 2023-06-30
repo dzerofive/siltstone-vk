@@ -22,7 +22,7 @@ public:
         const vk::Buffer buffer() const noexcept;
         const vk::DeviceMemory memory() const noexcept;
         
-protected:
+//protected:
         vk::Buffer m_buffer;
         vk::MemoryRequirements m_memory_req;
         vk::DeviceMemory m_memory;

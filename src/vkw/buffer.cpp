@@ -33,6 +33,7 @@ sln::vkw::Buffer::Buffer(const sln::vkw::Device& device,
 }
 sln::vkw::Buffer::~Buffer() {
         m_device->destroyBuffer(m_buffer);
+        m_device->freeMemory(m_memory);
         BOOST_LOG_TRIVIAL(trace) << "Destroyed buffer";
 }
 
