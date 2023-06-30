@@ -58,7 +58,7 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
 
 
         vk::PipelineInputAssemblyStateCreateInfo input_assembly_info{};
-        input_assembly_info.topology = vk::PrimitiveTopology::eTriangleStrip;
+        input_assembly_info.topology = vk::PrimitiveTopology::eTriangleList;
         input_assembly_info.primitiveRestartEnable = false;
 
         

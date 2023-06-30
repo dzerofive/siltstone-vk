@@ -10,7 +10,6 @@ sln::vkw::Instance::Instance(std::string app_name,
 	app_info.engineVersion = 0;
 	app_info.apiVersion = VK_API_VERSION_1_3;
 
-	uint32_t glfwExtCount = 0;
 	vk::InstanceCreateInfo instance_info{};
 	instance_info.pApplicationInfo = &app_info;
 	instance_info.enabledExtensionCount = extensions.size();

@@ -13,9 +13,12 @@ public:
         const vk::Device* operator->() const noexcept;
 
         const vk::Queue& graphic_queue() const noexcept;
+        const uint32_t graphic_family() const noexcept;
+        const sln::vkw::PhysicalDevice& parent_device() const noexcept;
 private:	
         vk::Queue m_graphic_queue;
+        uint32_t m_graphic_family;
         vk::Device m_device;
-
+        const sln::vkw::PhysicalDevice m_parent_device;
 };
 } // namespace d05

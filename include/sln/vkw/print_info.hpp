@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sln/log_prefixes.hpp>
+#include <sln/util/log_prefixes.hpp>
 #include <iostream>
 
 #include "physical_device.hpp"
