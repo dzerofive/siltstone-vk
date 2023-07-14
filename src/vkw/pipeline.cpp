@@ -4,6 +4,7 @@
 //       -== Outline ==-       //
 // - render pass               //
 // - fixed stage functions     //
+// - pipeline layout           //
 // - programmable (shaders)    //
 // - getters                   //
 // - framebuffers              //
@@ -35,8 +36,10 @@ inline void sln::vkw::Pipeline::create_render_pass(const sln::vkw::Device& devic
 }
 
 // Constructor
-sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swapchain& swapchain) {
+sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swapchain& swapchain, 
+                             const vk::ArrayProxyNoTemporaries<vk::DescriptorSetLayout>& descriptor_set_layouts) {
         create_render_pass(device, swapchain);
+
 
         // Fixed stages
         std::vector<vk::DynamicState> dynamic_states {
@@ -44,8 +47,7 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
                 vk::DynamicState::eScissor
         };
         vk::PipelineDynamicStateCreateInfo dynamic_state_info{};
-        dynamic_state_info.dynamicStateCount = dynamic_states.size();
-        dynamic_state_info.pDynamicStates = dynamic_states.data();
+        dynamic_state_info.setDynamicStates(dynamic_states);
         
 
         auto binding_description = sln::Vertex::binding_description();
@@ -122,9 +124,9 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
         color_blend_info.pAttachments = &color_blend_attachment;
 
 
+        // Layout
         vk::PipelineLayoutCreateInfo pipeline_layout_info{};
-        pipeline_layout_info.setLayoutCount = 0;
-        pipeline_layout_info.pSetLayouts = nullptr;
+        pipeline_layout_info.setSetLayouts(descriptor_set_layouts);
         pipeline_layout_info.pushConstantRangeCount = 0;
         pipeline_layout_info.pPushConstantRanges = nullptr;
         vk::PipelineLayout pipeline_layout = device->createPipelineLayout(pipeline_layout_info);
@@ -196,3 +198,6 @@ const vk::RenderPass sln::vkw::Pipeline::render_pass() const noexcept {
 const vk::Framebuffer sln::vkw::Pipeline::framebuffer(size_t index) const noexcept {
         return m_framebuffers[index];
 }
+const vk::PipelineLayout sln::vkw::Pipeline::pipeline_layout() const noexcept {
+        return m_pipeline_layout;
+};

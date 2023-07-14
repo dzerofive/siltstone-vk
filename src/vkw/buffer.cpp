@@ -40,6 +40,7 @@ sln::vkw::Buffer::~Buffer() {
 // Getters
 const vk::DeviceMemory sln::vkw::Buffer::memory() const noexcept { return m_memory; }
 const vk::Buffer sln::vkw::Buffer::buffer() const noexcept { return m_buffer; }
+const vk::Buffer sln::vkw::Buffer::get() const noexcept { return this->buffer(); }
 
 sln::vkw::HostBuffer::HostBuffer(const sln::vkw::Device& device,
                                  const vk::DeviceSize size,

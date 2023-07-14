@@ -21,9 +21,13 @@ public:
         std::string title();
         vk::Extent2D framebuffer_extent();
 
+        bool is_resized();
+        void reset_window_resized();
 private:
-        GLFWwindow* m_window;
+        static void framebuffer_resize_callback(GLFWwindow* window, int width, int height);
 
+        GLFWwindow* m_window;
+        bool m_framebuffer_resized = false;
         uint32_t m_width;
         uint32_t m_height;
         std::string m_title;
