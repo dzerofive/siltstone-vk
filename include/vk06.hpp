@@ -27,6 +27,7 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
+#include <random>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -42,10 +43,10 @@ namespace sln {
                 //print_info(pdevice);
                 //print_info(window);
                 std::vector<sln::Vertex> vertices = {
-                        {{-1.f, -1.f, 0.f}, {1.f, 1.f, 1.f}},
-                        {{-0.8f, -0.8f, 0.f}, {1.f, 0.f, 1.f}},
-                        {{-1.f, -0.6f, 0.f}, {0.f, 0.f, 0.f}},
-                        {{-1.f, -0.6f, -0.5f}, {0.f, 1.f, 0.f}}
+                        {{-0.9f, -0.9f, 0.f}, {1.f, 1.f, 1.f}},
+                        {{0.0f, -0.9f, 0.f}, {1.f, 0.f, 1.f}},
+                        {{-0.9f, -0.5f, 0.f}, {0.f, 0.f, 0.f}},
+                        {{-0.7f, -0.1f, 0.f}, {0.f, 1.f, 0.f}}
                 };
                 std::vector<uint32_t> indices = {
                         2, 0, 1, 2, 1, 3
@@ -63,30 +64,39 @@ namespace sln {
                 
 
 
-                vk::DescriptorSetLayoutBinding dset_layout_binding;
-                dset_layout_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-                dset_layout_binding.descriptorCount = swapchain.image_views().size();
-                dset_layout_binding.binding = 0;
-                dset_layout_binding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+                // ----------------------
+                // Descriptor Set Layout
+                // ----------------------
+                vk::DescriptorSetLayoutBinding dset_lb;
+                dset_lb.descriptorType = vk::DescriptorType::eUniformBuffer;
+                dset_lb.descriptorCount = 1; // maybe 3
+                dset_lb.binding = 0;
+                dset_lb.stageFlags = vk::ShaderStageFlagBits::eVertex;
                 std::vector<vk::DescriptorSetLayoutBinding> dset_layout_bindings;
-                dset_layout_bindings.push_back(dset_layout_binding);
-                
+                dset_layout_bindings.push_back(dset_lb);
+                // Descriptor Set itself
                 vk::DescriptorSetLayoutCreateInfo dset_layout_info;
                 dset_layout_info.setBindings(dset_layout_bindings);
                 
                 std::vector<vk::DescriptorSetLayout> dset_layouts;
-                //for(const auto& i : swapchain.image_views()) {
-                        auto l = device->createDescriptorSetLayout(dset_layout_info);
-                        dset_layouts.push_back(l);
-                //}
+                auto l = device->createDescriptorSetLayout(dset_layout_info);
+                dset_layouts.push_back(l);
 
 
-                sln::UBO ubo;
+                // ----------------------
+                //        Pipeline
+                // ----------------------
+                // TODO: That should be moved back to member objects, and Descriptor Set Layouts to separate object initialized before that
+                sln::vkw::Pipeline pipeline{device, swapchain, dset_layouts[0]};
+
+
+                sln::UBO view_ubo;
                 sln::vkw::Buffer ubo_buffer(device, 
-                                            sizeof(ubo), 
+                                            sizeof(view_ubo), 
                                             vk::BufferUsageFlagBits::eUniformBuffer, 
                                             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-                auto ubo_ptr = static_cast<sln::UBO*>(device->mapMemory(ubo_buffer.memory(), 0, sizeof(ubo)));
+                auto ubo_ptr = static_cast<sln::UBO*>(device->mapMemory(ubo_buffer.memory(), 0, sizeof(view_ubo)));
+
 
                 std::cout << "Swapchain image view count: " << swapchain.image_views().size() << '\n';
                 vk::DescriptorPoolSize d_pool_size;
@@ -101,13 +111,13 @@ namespace sln {
                 vk::DescriptorSetAllocateInfo dset_allocate_info;
                 dset_allocate_info.descriptorPool = descriptor_pool;
                 dset_allocate_info.descriptorSetCount = swapchain.image_views().size();
-                dset_allocate_info.setSetLayouts(dset_layouts);
+                dset_allocate_info.setSetLayouts(dset_layouts[0]);
                 auto descriptor_sets = device->allocateDescriptorSets(dset_allocate_info);
                 
                 vk::DescriptorBufferInfo uniform_buffer_descriptor;
                 uniform_buffer_descriptor.buffer = ubo_buffer.get();
                 uniform_buffer_descriptor.offset = 0;
-                uniform_buffer_descriptor.range = sizeof(ubo);
+                uniform_buffer_descriptor.range = sizeof(view_ubo);
 
                 vk::WriteDescriptorSet dset_write_info;
                 dset_write_info.dstSet = descriptor_sets[0];
@@ -119,12 +129,10 @@ namespace sln {
                 device->updateDescriptorSets(dset_write_info, nullptr);
 
 
-                #warning That should be moved back to member objects, and Descriptor Set Layouts to separate object initialized before that
-                sln::vkw::Pipeline pipeline{device, swapchain, dset_layouts[0]};
-
-
+                // Models
                 Model test_model(device, vertices, indices);
                 Model test_model2(device, vertices2, indices2);
+
 
                 // Synchronization objects
                 std::vector<vk::Semaphore> semaphore_image_available = { device->createSemaphore({}) };
@@ -134,6 +142,24 @@ namespace sln {
                 
                 sln::vkw::CommandPool command_pool(device); 
                 auto command_buffer = command_pool.allocate_command_buffer(device.graphic_queue());
+                auto pre_loop_command_buffer = command_pool.allocate_command_buffer(device.graphic_queue());
+
+                pre_loop_command_buffer.begin();
+                pre_loop_command_buffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, 
+                                                   pipeline.layout(), 
+                                                   0, 
+                                                   1,
+                                                   descriptor_sets.data(),
+                                                   0,
+                                                   nullptr);
+                pre_loop_command_buffer.end();
+                pre_loop_command_buffer.submit();
+
+                float side_offset = 0.f;
+                glm::vec3 scene_pos(0.f);
+                std::mt19937 mt;
+                std::uniform_real_distribution<float> uniform_dist(-0.001f, 0.001f);
+
 
                 while(!window.should_close()) {
                         // ---------------------
@@ -142,7 +168,7 @@ namespace sln {
                         // Poll GLFW events (exit event)
                         window.poll_events();
                          
-                        glm::vec3 camera = { 1.f, 0.f, 1.f };
+                        glm::vec3 camera = { 0.1f, 0.f, 1.f };
                         glm::vec3 target = {0.f, 0.f, 0.f };
                         glm::vec3 up = { 0.f, 0.f, 1.f };
                         ubo_ptr->view = glm::lookAt(camera, target, up);
@@ -151,7 +177,8 @@ namespace sln {
                                                                 0.1f, 10.f);
                         projection[1][1] *= -1;
                         ubo_ptr->projection = projection;
-                        ubo_ptr->model = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, 0.f));
+                        scene_pos += glm::vec3(uniform_dist(mt), uniform_dist(mt), 0.f);
+                        ubo_ptr->model = glm::translate(glm::mat4(1.f), scene_pos);
 
 
                         // ---------------------
@@ -180,18 +207,22 @@ namespace sln {
                         render_pass_begin_info.clearValueCount = 1;
                         render_pass_begin_info.pClearValues = &clear_color;
                         command_buffer->beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
-                        command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
 
                         command_buffer->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, 
-                                                           pipeline.pipeline_layout(), 
-                                                           0, 
-                                                           descriptor_sets[0], 
-                                                           nullptr);
+                                                   pipeline.layout(), 
+                                                   0, 
+                                                   1,
+                                                   descriptor_sets.data(),
+                                                   0,
+                                                   nullptr);
+                        command_buffer->bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
 
 
                         vk::Rect2D scissor{};
                         scissor.offset = vk::Offset2D{0, 0};
                         scissor.extent = swapchain.extent();
+                        command_buffer->setScissor(0, 1, &scissor);
+
                         vk::Viewport viewport{};
                         viewport.x = 0.f;
                         viewport.y = 0.f;
@@ -199,17 +230,17 @@ namespace sln {
                         viewport.height = swapchain.extent().height;
                         viewport.minDepth = 0.f;
                         viewport.maxDepth = 1.f;
-                        command_buffer->setScissor(0, 1, &scissor);
                         command_buffer->setViewport(0, 1, &viewport);
+
 
                         test_model.bind(command_buffer.get());
                         test_model.draw(command_buffer.get());
                         test_model2.bind(command_buffer.get());
                         test_model2.draw(command_buffer.get());
 
+
                         command_buffer->endRenderPass();
                         command_buffer.end();
-
                         command_buffer.submit(semaphore_image_available, semaphore_render_finished, wait_stages, in_flight);
 
                         vk::PresentInfoKHR present_info{};

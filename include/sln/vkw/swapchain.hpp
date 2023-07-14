@@ -21,8 +21,8 @@ public:
         
         const vk::SurfaceFormatKHR& format() const noexcept;
         const vk::Extent2D& extent() const noexcept;
-        const std::vector<vk::ImageView> image_views() const noexcept;
-        const vk::ImageView image_view(size_t index) const noexcept;
+        const std::vector<vk::ImageView>& image_views() const noexcept;
+        const vk::ImageView& image_view(size_t index) const noexcept;
 
 private:
         vk::SurfaceCapabilitiesKHR m_surface_capabilities; 

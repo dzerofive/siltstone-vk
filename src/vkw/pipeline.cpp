@@ -129,7 +129,7 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
         pipeline_layout_info.setSetLayouts(descriptor_set_layouts);
         pipeline_layout_info.pushConstantRangeCount = 0;
         pipeline_layout_info.pPushConstantRanges = nullptr;
-        vk::PipelineLayout pipeline_layout = device->createPipelineLayout(pipeline_layout_info);
+        m_layout = device->createPipelineLayout(pipeline_layout_info);
 
 
         // Shader stages
@@ -164,7 +164,7 @@ sln::vkw::Pipeline::Pipeline(const sln::vkw::Device& device, const sln::vkw::Swa
         pipeline_info.pDepthStencilState = &depth_stencil_info;
         pipeline_info.pColorBlendState = &color_blend_info;
         pipeline_info.pDynamicState = &dynamic_state_info;
-        pipeline_info.layout = pipeline_layout;
+        pipeline_info.layout = m_layout;
         pipeline_info.renderPass = m_render_pass;
         pipeline_info.subpass = 0;
         
@@ -198,6 +198,6 @@ const vk::RenderPass sln::vkw::Pipeline::render_pass() const noexcept {
 const vk::Framebuffer sln::vkw::Pipeline::framebuffer(size_t index) const noexcept {
         return m_framebuffers[index];
 }
-const vk::PipelineLayout sln::vkw::Pipeline::pipeline_layout() const noexcept {
-        return m_pipeline_layout;
+const vk::PipelineLayout sln::vkw::Pipeline::layout() const noexcept {
+        return m_layout;
 };

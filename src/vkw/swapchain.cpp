@@ -1,5 +1,6 @@
 #include <sln/vkw/swapchain.hpp>
 #include <algorithm>
+#include <iostream>
 
 inline vk::Extent2D get_glfw_extent(GLFWwindow* window) {
         int w, h;
@@ -17,7 +18,7 @@ sln::vkw::Swapchain::Swapchain(sln::vkw::Device         device,
         m_surface_format = m_surface_formats[0];
         m_framebuffer_extent = window.framebuffer_extent();
 
-        uint32_t q = 0;
+        uint32_t q = 0; // queue family index
         vk::SwapchainCreateInfoKHR swap_info{};
         swap_info.surface = surface.get();
         swap_info.minImageCount = std::max(uint32_t{2}, m_surface_capabilities.minImageCount);
@@ -62,9 +63,9 @@ const vk::SurfaceFormatKHR& sln::vkw::Swapchain::format() const noexcept {
 const vk::Extent2D& sln::vkw::Swapchain::extent() const noexcept {
         return m_framebuffer_extent; 
 }
-const std::vector<vk::ImageView> sln::vkw::Swapchain::image_views() const noexcept {
+const std::vector<vk::ImageView>& sln::vkw::Swapchain::image_views() const noexcept {
         return m_image_views;
 }
-const vk::ImageView sln::vkw::Swapchain::image_view(size_t index) const noexcept {
+const vk::ImageView& sln::vkw::Swapchain::image_view(size_t index) const noexcept {
         return m_image_views[index];
 }
